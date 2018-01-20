@@ -75,6 +75,39 @@ int main()
 	}
 	printf("receive information: %s",buffer);
 
+
+	//客户端
+	char hostname[25];
+	struct hostent *host;
+
+
+	scanf("%s",hostname);
+	if (gethostbyname(hostname) == NULL)
+	{
+		perror("gethostbyname");
+		exit(1);
+	}
+
+	memset(buffer,0,sizeof(buffer));
+	scanf("输入发送的信息：",&buffer);
+	
+	client_sock.sin_family= AF_UNSPEC;
+	client_sock.sin_addr = *((struct in_addr *)hostname->h_addr);
+	client_sock.sin_port = htons(22);
+	bzero(&(server_sock.sin_zero),8);
+
+	if (connect(socketfd,(struct sockaddr_in *)&socket_sock,sizeof(struct sockaddr_in))==-1)
+	{
+		perror("connect fail");
+		exit(1);
+	}
+
+	if (sendto(socketfd,buffer,strlen(buf),0)==-1)
+	{
+		perror("send fail");
+		exit(1);
+	}
+
 	//关闭连接
 	close(socketfd);
 	exit(0);
