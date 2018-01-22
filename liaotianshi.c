@@ -12,10 +12,11 @@
 
 #define buffersize 1024
 #define MAX_QUE_CONN_NM 5
+#define  dest_file  "information_file"
 
 int main()
 {
-	//定义两个进程，一个是发送信息进程，一个是接收信息进程
+	//定义两个进程，一个是发送信息进程，一个  是接收信息进程
 	pid_t caller;
 	pid_t recevier;
 
@@ -29,7 +30,9 @@ int main()
 	char buffer[buffersize];
 	int socketfd;
 	
-        int sin_size;
+    int sin_size;
+
+	struct flock lock;
 
 	//开始建立,AF_INET支持ipv4
 	if ((socketfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
@@ -111,6 +114,50 @@ int main()
 		exit(1);
 	}
 
+
+	//将信息写入dest_file文件，作为聊天记录
+	dest_file = open(dest_file,O_WRONLY|O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	
+	if (dest_file < 0)
+	{
+		printf("open fail");
+		exit(1);
+	}
+
+	write(dest_file,buffer,strlen(buffer));
+	fopen(dest_file, "w", stdout);
+
+	lock.l_len = 0;
+	lock.l_whence = SEEK_SET;
+	lock.l_start = 0;
+	lock.l_pid = -1;
+	lock.l_type = F_WRLCK;
+
+	fcntl(dest_file, F_GETLK, &lock);
+
+	if (lock.l_type != F_UNLCK)
+	{
+		if (lock.l_type == F_WRLCK)
+		{
+			printf("already have write lock %d",lock.l_pid);
+		}
+		if (lock.l_type == F_RDLCK)
+		{
+			printf("already have read lock %d", lock.l_pid);
+		}
+	}
+
+	lock.l_type = F_WRLCK;
+
+	if (fcntl(dest_file, F_SETLKW, &lock) < 0)
+	{
+		printf("lock fail %d",lock.l_type);
+		return 1;
+	}
+
+	close(dest_file);
+
+	
 	//关闭连接
 	close(socketfd);
 	exit(0);
